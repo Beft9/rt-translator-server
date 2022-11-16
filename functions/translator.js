@@ -1,6 +1,7 @@
 // Imports the Google Cloud client library
-const {Translate} = require('@google-cloud/translate').v2;
+import { v2 } from '@google-cloud/translate';
 
+const Translate = v2.Translate
 const projectId = 'wired-compass-334608';
 
 // Instantiates a client
@@ -18,6 +19,17 @@ async function Translater(req, res) {
   console.log(`Text: ${text}`);
   console.log(`Translation: ${translation}`);
   res.send(translation)
+}
+
+export async function SimpleTranslater(text, source, target) {
+  
+  const reqOptions = {
+    from: source,
+    to: target
+  }
+  console.log(reqOptions);
+  const [translation] = await translate.translate(text, reqOptions);
+  return translation;
 }
 
 export default Translater;
