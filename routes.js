@@ -3,16 +3,18 @@ import { Router } from "express";
 import { v2 } from '@google-cloud/translate';
 import { v1 } from '@google-cloud/text-to-speech'
 
-
+// Instantiates clients
 const Translate = v2.Translate
 const Speech = v1.TextToSpeechClient;
 
-
 const projectId = 'wired-compass-334608';
 
-// Instantiates clients
 const translate = new Translate({projectId});
 const speech = new Speech({projectId})
+
+/* Database Initilize */
+import pool from "./db_initialize.js"
+
 const meetings = []
 
 async function Translater(req, res) {
@@ -56,11 +58,25 @@ router.post('/send_speech', SendSpeechHTTP);
 router.post('/create_meeting', CreateMeeting);
 router.post('/join_meeting', JoinMeeting);
 router.post('/change_language', ChangeLanguage);
+router.post('/sign_up', SignUp)
 //router.post('/transcript', Transcript);
 router.get('/translate', Translater);
 router.get('/texttospeech',TextToSpeechHTTP)
 
 //router.ws("/meeting_hub", MeetingWS);
+
+// User Interactions !!!
+import { AddUser } from "./functions/db_interactions.js";
+
+export async function SignUp(req,res){
+  try {
+    AddUser(pool, req.body.body, res);
+    
+  } catch(err) {
+    console.log("Error",err);
+  }
+}
+
 
 async function SendSpeechHTTP(req, res) {
   console.log(req.body)
