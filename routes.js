@@ -59,6 +59,7 @@ router.post('/create_meeting', CreateMeeting);
 router.post('/join_meeting', JoinMeeting);
 router.post('/change_language', ChangeLanguage);
 router.post('/sign_up', SignUp)
+router.post('/login', Login)
 //router.post('/transcript', Transcript);
 router.get('/translate', Translater);
 router.get('/texttospeech',TextToSpeechHTTP)
@@ -66,7 +67,7 @@ router.get('/texttospeech',TextToSpeechHTTP)
 //router.ws("/meeting_hub", MeetingWS);
 
 // User Interactions !!!
-import { AddUser } from "./functions/db_interactions.js";
+import { AddUser, UserLogin } from "./functions/db_interactions.js";
 
 export async function SignUp(req,res){
   try {
@@ -77,9 +78,19 @@ export async function SignUp(req,res){
   }
 }
 
+export async function Login(req,res){
+  try {
+    UserLogin(pool, req.body.body, res);
+
+  } catch(err) {
+    console.log("Error",err);
+  }
+}
+
+
+// Google Api Methods !!!
 
 async function SendSpeechHTTP(req, res) {
-  console.log(req.body)
   try {
     res.send({"result":"success"});
   } catch(err) {
@@ -87,24 +98,37 @@ async function SendSpeechHTTP(req, res) {
   }
 }
 
+
+
+// Meeting Functions !!!
+import MeetingHub from "./ws_hubs.js"
+import { GetParticipantsSQL, GetMyMeetingSQL, CreateMeetingSQL, AddUserToMeetingSQL } from "./functions/db_interactions.js"
+
 async function CreateMeeting(req,res){
-  console.log(req.body.user)
   try {
-    meetings.push({
-      id: 1001,
-      users: [req.body.user]
-    })
-    req.app.set('meetings', meetings);
-    res.send(meetings[0]);
+    var response = await CreateMeetingSQL(pool, /* req.body.meeting_name */ "Meeting", req.body.owner_id);
+    if(response?.success){
+      var meeting = await GetMyMeetingSQL(pool, req.body.owner_id)
+      AddUserToMeetingSQL(pool, req.body.owner_id, meeting.meeting.id);
+      res.send({success: true, meeting: meeting.meeting});
+    }
+    res.send(response);
   } catch(err) {
     console.log("Error",err);
   }
 }
 async function JoinMeeting(req,res){
   try {
-    meetings[0].users.push(req.body.user);
-    req.app.set('meetings', meetings);
-    res.send(meetings[0]);
+    var response = await AddUserToMeetingSQL(pool, req.body.user.id, req.body.meeting_id);
+    console.log(response)
+    if(response?.success){
+      console.log("Succesfully joined!");
+      var participants = await GetParticipantsSQL(pool, req.body.meeting_id);
+      res.send({success: true, participants: participants});
+    }
+    else {
+      res.send(response);
+    }
   } catch(err) {
     console.log("Error",err);
   }
