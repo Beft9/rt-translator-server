@@ -109,11 +109,31 @@ export async function AddUserToMeetingSQL(Pool, user_id, meeting_id){
         (err,res) => {
             if(err){
                 console.log("Error cought when joining the meeting!")
+                if(err.constraint == "MeetingUsers_PK"){
+                    console.log("User already in the meeting");
+                    resolve({ success: true });
+                }
                 console.log(err);
                 resolve({success: false, error: err.detail})
             }
             else {
                 console.log(res);
+                resolve({ success: true });
+            }
+        })
+    })
+}
+
+export async function DeleteUserFromMeetingSQL(Pool, user_id, meeting_id){
+
+    return new Promise((resolve) => { Pool.query(`DELETE FROM public."MeetingUsers" WHERE user_id = `+user_id+`  AND meeting_id = `+meeting_id+`;`,
+        (err,res) => {
+            if(err){
+                console.log("Error cought when leaving the meeting!")
+                console.log(err);
+                resolve({success: false, error: err.detail})
+            }
+            else {
                 resolve({ success: true });
             }
         })

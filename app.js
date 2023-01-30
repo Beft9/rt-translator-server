@@ -6,7 +6,6 @@ import expressWs from "express-ws";
 const PORT = 5000
 const app = express();
 
-app.set('meetings', []);
 expressWs(app);
 
 console.log("Server started...")

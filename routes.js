@@ -3,6 +3,8 @@ import { Router } from "express";
 import { v2 } from '@google-cloud/translate';
 import { v1 } from '@google-cloud/text-to-speech'
 
+import { WebSocket } from "ws";
+
 // Instantiates clients
 const Translate = v2.Translate
 const Speech = v1.TextToSpeechClient;
@@ -57,6 +59,7 @@ const router = Router();
 router.post('/send_speech', SendSpeechHTTP);
 router.post('/create_meeting', CreateMeeting);
 router.post('/join_meeting', JoinMeeting);
+router.post('/leave_meeting', LeaveMeeting);
 router.post('/change_language', ChangeLanguage);
 router.post('/sign_up', SignUp)
 router.post('/login', Login)
@@ -101,8 +104,9 @@ async function SendSpeechHTTP(req, res) {
 
 
 // Meeting Functions !!!
-import MeetingHub from "./ws_hubs.js"
-import { GetParticipantsSQL, GetMyMeetingSQL, CreateMeetingSQL, AddUserToMeetingSQL } from "./functions/db_interactions.js"
+import MeetingHub, { SendNewUser } from "./ws_hubs.js"
+import { GetParticipantsSQL, GetMyMeetingSQL, CreateMeetingSQL, AddUserToMeetingSQL, DeleteUserFromMeetingSQL } from "./functions/db_interactions.js"
+
 
 async function CreateMeeting(req,res){
   try {
@@ -124,6 +128,10 @@ async function JoinMeeting(req,res){
     if(response?.success){
       console.log("Succesfully joined!");
       var participants = await GetParticipantsSQL(pool, req.body.meeting_id);
+      participants.forEach((user)=>{
+        console.log(user);
+        SendNewUser(router, req.body.meeting_id, user.id, participants);
+      })
       res.send({success: true, participants: participants});
     }
     else {
@@ -133,6 +141,23 @@ async function JoinMeeting(req,res){
     console.log("Error",err);
   }
 }
+async function LeaveMeeting(req, res){
+  try {
+    var response = await DeleteUserFromMeetingSQL(pool, req.body.user_id, req.body.meeting_id);
+    if(response?.success){
+      console.log("Succesfully left!");
+      var participants = await GetParticipantsSQL(pool, req.body.meeting_id);
+      participants.forEach((user)=>{
+        console.log(user);
+        SendNewUser(router, req.body.meeting_id, user.id, participants);
+      })
+    }
+    res.send(response)
+  } catch(err) {
+    console.log("Error",err);
+  }
+}
+
 async function ChangeLanguage(req,res){
   try {
     for(let i=0; i<meetings[0].users.length; i++){
