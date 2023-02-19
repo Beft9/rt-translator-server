@@ -1,14 +1,21 @@
 import { TextToSpeech } from "./functions/speaker.js";
 import { SimpleTranslater } from "./functions/translator.js";
 
-export default function main(app){
-    app.ws('/meeting_hub', function(ws, req) {
+export default function MeetingHub(router, meeting_id, user_id){
+    router.ws('/meeting_hub/'+meeting_id+'/'+user_id, function(ws, req) {
         ws.on('message', async function(msg) {
             try {
+                console.log("Message!");
                 var meetings = app.get('meetings');
                 console.log(meetings);
-                var req = JSON.parse(msg);
+                console.log(msg);
                 console.log(req)
+                var req = JSON.parse(msg);
+                if(req.type == "start"){
+                    console.log("StartTypeMessage");
+                    
+                    return;
+                }
                 for(let i=0; i<meetings[0].users.length; i++){
                     if(meetings[0].users[i].name != req.user){
                         console.log(meetings[0].users[i]);
@@ -35,3 +42,25 @@ export default function main(app){
         console.log('socket', req.testing);
     });
 }
+
+export function SendNewUser(io, meeting_id, user_id, participants){
+    io.emit("newUserJoined", {
+        participants: participants
+    })
+}
+
+export async function CreateHub(io, meeting_id, user_id){
+    console.log("Hub Creation");
+    /*io.on("connection", (socket) => {
+        console.log("Meeting socket created...");
+        console.log("id:", socket.id)
+      });*/
+}
+
+export function DeleteHub(ws_hubs, meeting_id, user_id){
+    function findHub(hub){
+        return (hub.meeting_id==meeting_id && hub.user_id==user_id)
+    }
+}
+
+

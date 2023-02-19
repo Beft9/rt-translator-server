@@ -1,12 +1,14 @@
 import express from "express";
 import router from "./routes.js";
-import expressWs from "express-ws";
-
+import { createServer } from "http";
+import { Server } from "socket.io";
 
 const PORT = 5000
 const app = express();
+const httpServer = createServer(app);
+const io = new Server(httpServer, { path: "/meeting_hub"});
 
-expressWs(app);
+app.set("io", io);
 
 console.log("Server started...")
 
@@ -16,4 +18,9 @@ app.use(express.json())
 
 app.use(router)
 
-app.listen(PORT);
+httpServer.listen(PORT);
+
+io.on("connection", (socket) => {
+    console.log("Meeting socket created...");
+    console.log("id:", socket.id)
+  });

@@ -70,12 +70,14 @@ export async function CreateMeetingSQL(Pool, name, user_id){
         (err,res) => {
             if(err){
                 console.log("Error cought when creating meeting!")
-                console.log(err);
                 if(err.constraint == 'owner_id_unq'){
                     console.log("You have already an ongoing meeting!")
                     resolve({success: true});
                 }
-                resolve({success: false, error: err.detail})
+                else {
+                    console.log(err);
+                    resolve({success: false, error: err.detail})
+                }
             }
             else {
                 console.log("Meeting Created on Table!");
@@ -113,8 +115,10 @@ export async function AddUserToMeetingSQL(Pool, user_id, meeting_id){
                     console.log("User already in the meeting");
                     resolve({ success: true });
                 }
-                console.log(err);
-                resolve({success: false, error: err.detail})
+                else {
+                    console.log(err);
+                    resolve({success: false, error: err.detail})
+                }
             }
             else {
                 console.log(res);

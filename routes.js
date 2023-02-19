@@ -104,7 +104,7 @@ async function SendSpeechHTTP(req, res) {
 
 
 // Meeting Functions !!!
-import MeetingHub, { SendNewUser } from "./ws_hubs.js"
+import MeetingHub, { SendNewUser, CreateHub } from "./ws_hubs.js"
 import { GetParticipantsSQL, GetMyMeetingSQL, CreateMeetingSQL, AddUserToMeetingSQL, DeleteUserFromMeetingSQL } from "./functions/db_interactions.js"
 
 
@@ -114,6 +114,7 @@ async function CreateMeeting(req,res){
     if(response?.success){
       var meeting = await GetMyMeetingSQL(pool, req.body.owner_id)
       AddUserToMeetingSQL(pool, req.body.owner_id, meeting.meeting.id);
+      CreateHub(req.app.get('io'), req.body.owner_id, meeting.meeting.id);
       res.send({success: true, meeting: meeting.meeting});
     }
     res.send(response);
@@ -130,7 +131,7 @@ async function JoinMeeting(req,res){
       var participants = await GetParticipantsSQL(pool, req.body.meeting_id);
       participants.forEach((user)=>{
         console.log(user);
-        SendNewUser(router, req.body.meeting_id, user.id, participants);
+        SendNewUser(req.app.get('io'), req.body.meeting_id, user.id, participants);
       })
       res.send({success: true, participants: participants});
     }
@@ -149,7 +150,7 @@ async function LeaveMeeting(req, res){
       var participants = await GetParticipantsSQL(pool, req.body.meeting_id);
       participants.forEach((user)=>{
         console.log(user);
-        SendNewUser(router, req.body.meeting_id, user.id, participants);
+        SendNewUser(req.app.get('io'), req.body.meeting_id, user.id, participants);
       })
     }
     res.send(response)
