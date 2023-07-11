@@ -290,3 +290,66 @@ export async function DeleteUserFromMeetingSQL(Pool, user_id, meeting_id) {
             })
     })
 }
+
+
+//#region dbSendMessage
+export async function dbSendMessage(Pool, body, respond) {
+    var time = new Date(Date.now() + (1000 * 60 * (-(new Date()).getTimezoneOffset()))).toISOString().replace('T', ' ').replace('Z', '');
+    var now = new Date().toISOString().split('T')[0];
+    Pool.query(`INSERT INTO public."Messages"(
+        sender_user_id, incoming_user_id, message, send_date)
+        VALUES ('`+ body.sender_user_id + "','" + body.incoming_user_id + "','" + body.message + "','" + time + "')",
+        (err, res) => {
+            if (err) {
+                console.log("Error!");
+                console.log(err)
+                respond.send({ "success": false, "error": err.detail })
+                return;
+            }
+
+            respond.send({ "success": true });
+        })
+}
+
+export async function dbSendedMessagesListByUserId(Pool, sender_user_id, respond) {
+
+    Pool.query(`SELECT *
+	FROM public."Messages" where sender_user_id = '`+ sender_user_id + "';",
+        (err, res) => {
+            if (err) {
+                console.log("Error! >>> " + err);
+                respond.send({ "success": false, "error": err.detail })
+                return;
+            }
+
+            if (res.rows.length < 1) {
+                console.log("No records found!");
+                respond.send({ "success": false, "error": "No records found!" });
+                return;
+            }
+
+            respond.send({ "success": true, "datas": res.rows });
+        })
+}
+
+export async function dbIncomingMessagesListByUserId(Pool, incoming_user_id, respond) {
+
+    Pool.query(`SELECT *
+	FROM public."Messages" where incoming_user_id = '`+ incoming_user_id + "';",
+        (err, res) => {
+            if (err) {
+                console.log("Error! >>> " + err);
+                respond.send({ "success": false, "error": err.detail })
+                return;
+            }
+
+            if (res.rows.length < 1) {
+                console.log("No records found!");
+                respond.send({ "success": false, "error": "No records found!" });
+                return;
+            }
+
+            respond.send({ "success": true, "datas": res.rows });
+        })
+}
+//#endregion

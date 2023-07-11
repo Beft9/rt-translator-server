@@ -28,4 +28,8 @@ export function DeleteHub(ws_hubs, meeting_id, user_id){    // Not available yet
     }
 }
 
+export function SendSpeechToParticipants(io, meeting_id, user_id, body_user_id, text, lang) {
+    console.log('SendSpeechToParticipants working')
+}
+
 
