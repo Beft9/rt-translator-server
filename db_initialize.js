@@ -4,7 +4,7 @@ const { Pool } = pg
 
 const pool = new Pool({
     user: 'user',
-    host: 'postgresql-96586-0.cloudclusters.net',
+    host: '68.64.164.117',
     database: 'rt-translator',
     password: 'postgres1234',
     port: 10061,
