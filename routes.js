@@ -77,6 +77,7 @@ router.get('/get_meetings_by_user', GetMeetingsByUser);
 router.post('/add_user_to_meeting', AddUserToMeeting);
 router.post('/message/send', SendMessage);
 router.post('/profile_photo/add', ProfilePhotoAdd);
+router.post('/profile_photo/update', ProfilePhotoUpdate);
 //router.post('/transcript', Transcript);
 router.get('/message/sended_messages_list_by_user_id', SendedMessagesListByUserId);
 router.get('/message/sended_incoming_messages_list_by_user_id', IncomingMessagesListByUserId);

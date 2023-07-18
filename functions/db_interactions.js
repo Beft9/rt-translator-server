@@ -373,7 +373,7 @@ export async function dbAddProfilePhoto(Pool, body, respond) {
 
 export async function dbUpdateProfilePhoto(Pool, body, respond) {
  
-    Pool.query(`UPDATE public."profilePhoto" SET image=${body.image}' WHERE user_id=${body.user_id}`,
+    Pool.query(`UPDATE public."profilePhoto" SET image='${body.image}' WHERE user_id=${body.user_id}`,
         (err, res) => {
             if (err) {
                 console.log("Error!  "+ err);                
