@@ -1,5 +1,13 @@
 /*  User Interactions   */
 
+// import { MeetingStatuses } from "../routes";
+
+export const MeetingStatuses = {
+    PAST: 1,
+    ACTIVE: 2,
+    FUTURE: 3
+}
+
 export function AddUser(Pool, user, respond) {
     console.log(user);
 
@@ -98,7 +106,7 @@ export function UpdateStatusSQL(Pool, user_id, status) {
 
 export function GetParticipantsSQL(Pool, meeting_id) {
     return new Promise((resolve) => {
-        Pool.query(`SELECT name, id, language, gender FROM public."MeetingUsers" JOIN public.users ON user_id = id WHERE meeting_id = ` + meeting_id + `;`,
+        Pool.query(`SELECT name, id, language, gender FROM public."meeting_users" JOIN public.users ON user_id = id WHERE meeting_id = ` + meeting_id + `;`,
             (err, res) => {
                 if (err) {
                     console.log("Error cought when getting participant of meeting!")
@@ -113,33 +121,121 @@ export function GetParticipantsSQL(Pool, meeting_id) {
 }
 
 
-export async function CreateMeetingSQL(Pool, name, user_id) {
+// export function GetMeetingsByUserSQL(Pool, user_id) {
+//     return new Promise((resolve) => {
+//         Pool.query(`SELECT id, name, startdate, enddate, meeting_status FROM public."meetings" WHERE id = ` + id + `;`,
+//             (err, res) => {
+//                 if (err) {
+//                     console.log("Error cought when getting participant of meeting!")
+//                     console.log(err);
+//                     resolve({ "success": false, "error": err.detail })
+//                 }
+//                 else {
+//                     resolve(res.rows);
+//                 }
+//             })
+//     })
+// }
+
+export function GetMeetingsByUserSQL(Pool, user_id) {
     return new Promise((resolve) => {
-        Pool.query(`INSERT INTO public.meetings(name, owner_id) VALUES ( '` + name + "', " + user_id + `);`,
+        Pool.query(
+            `SELECT meeting_id FROM public."meeting_users" WHERE user_id = ${user_id};`,
+            async (err, res) => {
+                if (err) {
+                    console.log("Error caught when getting participant of meeting!");
+                    console.log(err);
+                    resolve({ success: false, error: err.detail });
+                } else {
+                    const meetingIds = res.rows.map((row) => row.meeting_id);
+
+                    // Fetching the meetings details based on the meetingIds
+                    const pastMeetings = [];
+                    const activeMeetings = [];
+                    const futureMeetings = [];
+
+                    for (const meetingId of meetingIds) {
+                        const meetingData = await getMeetingDetails(Pool, meetingId);
+                        if (meetingData) {
+                            const currentDateTime = new Date();
+                            const currentDate = new Date(currentDateTime.getTime() - (currentDateTime.getTimezoneOffset() * 60000));
+                            const meetingdate = new Date(meetingData.meetingdate);
+                            const endDate = meetingData.enddate ? new Date(meetingData.enddate) : null;
+
+                            if (meetingdate < currentDate && endDate && endDate < currentDate) {
+                                pastMeetings.push(meetingData);
+                            } else if (currentDate > meetingdate && !endDate) {
+                                activeMeetings.push(meetingData);
+                            } else if (currentDate < meetingdate) {
+                                futureMeetings.push(meetingData);
+                            }
+                        }
+                    }
+
+                    resolve({
+                        success: true,
+                        pastMeetings,
+                        activeMeetings,
+                        futureMeetings,
+                    });
+                }
+            }
+        );
+    });
+}
+
+// Helper function to get meeting details from the 'meetings' table
+function getMeetingDetails(Pool, meeting_id) {
+    return new Promise((resolve) => {
+        Pool.query(
+            `SELECT id, name, createdate, enddate, meetingdate, ownerid, topic FROM public."meetings" WHERE id = ${meeting_id};`,
             (err, res) => {
                 if (err) {
-                    console.log("Error cought when creating meeting!")
-                    if (err.constraint == 'owner_id_unq') {
-                        console.log("You have already an ongoing meeting!")
-                        resolve({ success: true });
-                    }
-                    else {
-                        console.log(err);
-                        resolve({ success: false, error: err.detail })
-                    }
+                    console.log("Error caught when fetching meeting details!");
+                    console.log(err);
+                    resolve(null);
+                } else {
+                    resolve(res.rows[0]);
                 }
-                else {
-                    console.log("Meeting Created on Table!");
-                    resolve({ success: true });
-                }
-            })
-    })
+            }
+        );
+    });
 }
 
 
-export async function GetMyMeetingSQL(Pool, user_id) {
+
+export async function CreateMeetingSQL(Pool, name, createdate, userid, topic) {
+    const currentDateTime = new Date();
+    const localDateTime = new Date(currentDateTime.getTime() - (currentDateTime.getTimezoneOffset() * 60000));
+
     return new Promise((resolve) => {
-        Pool.query(`SELECT id FROM public.meetings WHERE owner_id = ` + user_id + `;`,
+        Pool.query(
+            `INSERT INTO public.meetings(name, createdate, meetingdate, topic, ownerid) VALUES ( '${name}', '${localDateTime.toISOString()}', '${createdate}', '${topic}', ${userid} ) RETURNING id;`,
+            (err, res) => {
+                if (err) {
+                    console.log("Error caught when creating meeting!");
+                    if (err.constraint == "owner_id_unq") {
+                        console.log("You have already an ongoing meeting!");
+                        resolve({ success: true });
+                    } else {
+                        console.log(err);
+                        resolve({ success: false, error: err.detail });
+                    }
+                } else {
+                    console.log("Meeting Created on Table!");
+                    const insertedId = res.rows[0].id;
+                    resolve({ success: true, id: insertedId });
+                }
+            }
+        );
+    });
+}
+
+
+
+export async function GetMyMeetingSQL(Pool, id) {
+    return new Promise((resolve) => {
+        Pool.query(`SELECT id FROM public.meetings WHERE id = ` + id + `;`,
             (err, res) => {
                 if (err) {
                     console.log("Error cought when finding the meeting of the user!")
@@ -147,42 +243,41 @@ export async function GetMyMeetingSQL(Pool, user_id) {
                     resolve({ success: false, "error": err.detail })
                 }
                 else {
-                    console.log(res);
+                    // console.log(res);
                     resolve({ success: true, meeting: res.rows[0] });
                 }
             })
     })
 }
 
-
 export async function AddUserToMeetingSQL(Pool, user_id, meeting_id) {
-
     return new Promise((resolve) => {
-        Pool.query(`INSERT INTO public."MeetingUsers"( user_id, meeting_id) VALUES (` + user_id + ", " + meeting_id + `);`,
+        Pool.query(
+            `INSERT INTO public.meeting_users(user_id, meeting_id) VALUES (${user_id}, ${meeting_id});`,
             (err, res) => {
                 if (err) {
-                    console.log("Error cought when joining the meeting!")
-                    if (err.constraint == "MeetingUsers_PK") {
+                    console.log("user_id: ", user_id, meeting_id)
+                    console.log("Error caught when joining the meeting!");
+                    if (err.constraint == "meeting_users_PK") {
                         console.log("User already in the meeting");
                         resolve({ success: true });
-                    }
-                    else {
+                    } else {
                         console.log(err);
-                        resolve({ success: false, error: err.detail })
+                        resolve({ success: false, error: err.detail });
                     }
-                }
-                else {
+                } else {
                     console.log(res);
                     resolve({ success: true });
                 }
-            })
-    })
+            }
+        );
+    });
 }
 
 export async function DeleteUserFromMeetingSQL(Pool, user_id, meeting_id) {
 
     return new Promise((resolve) => {
-        Pool.query(`DELETE FROM public."MeetingUsers" WHERE user_id = ` + user_id + `  AND meeting_id = ` + meeting_id + `;`,
+        Pool.query(`DELETE FROM public."meeting_users" WHERE user_id = ` + user_id + `  AND meeting_id = ` + meeting_id + `;`,
             (err, res) => {
                 if (err) {
                     console.log("Error cought when leaving the meeting!")

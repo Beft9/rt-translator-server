@@ -6,6 +6,13 @@ import { v1 } from '@google-cloud/text-to-speech'
 import { WebSocket } from "ws";
 
 // Instantiates clients
+
+export const MeetingStatuses = {
+  PAST: 1,
+  ACTIVE: 2,
+  FUTURE: 3
+}
+
 const Translate = v2.Translate
 const Speech = v1.TextToSpeechClient;
 
@@ -66,6 +73,8 @@ router.post('/change_language', ChangeLanguage);
 router.post('/sign_up', SignUp)
 router.post('/login', Login)
 router.post('/update_status', UpdateStatus);
+router.get('/get_meetings_by_user', GetMeetingsByUser);
+router.post('/add_user_to_meeting', AddUserToMeeting);
 //router.post('/transcript', Transcript);
 router.get('/get_contacts', GetContacts);
 router.get('/get_profile', GetProfile);
@@ -103,23 +112,57 @@ export async function Login(req, res) {
 
 // Meeting Functions !!!
 import { SendNewUser, CreateHub, SendSpeechToParticipants } from "./ws_hubs.js"
-import { GetContactsSQL, GetProfileSQL, UpdateStatusSQL, GetParticipantsSQL, GetMyMeetingSQL, CreateMeetingSQL, AddUserToMeetingSQL, DeleteUserFromMeetingSQL } from "./functions/db_interactions.js"
+import { GetContactsSQL, GetProfileSQL, UpdateStatusSQL, GetParticipantsSQL, GetMyMeetingSQL, CreateMeetingSQL, AddUserToMeetingSQL, DeleteUserFromMeetingSQL, GetMeetingsByUserSQL } from "./functions/db_interactions.js"
 
 
 async function CreateMeeting(req, res) {
+  console.log("req: ", req)
+
   try {
-    var response = await CreateMeetingSQL(pool, /* req.body.meeting_name */ "Meeting", req.body.owner_id);
+    var response = await CreateMeetingSQL(pool, req.body.name, req.body.createdate, req.body.userid, req.body.topic);
     if (response?.success) {
-      var meeting = await GetMyMeetingSQL(pool, req.body.owner_id)
-      AddUserToMeetingSQL(pool, req.body.owner_id, meeting.meeting.id);
-      CreateHub(req.app.get('io'), req.body.owner_id, meeting.meeting.id);
+      var meeting = await GetMyMeetingSQL(pool, response.id)
+      // if (req.body.meeting_status === MeetingStatuses.ACTIVE) {
+      AddUserToMeetingSQL(pool, req.body.userid, meeting.meeting.id);
+      // }
+      CreateHub(req.app.get('io'), req.body.userid, meeting.meeting.id);
       res.send({ success: true, meeting: meeting.meeting });
+    } else {
+      res.send(response);
     }
-    res.send(response);
   } catch (err) {
     console.log("Error", err);
   }
 }
+
+
+async function GetMeetingsByUser(req, res) {
+  try {
+    console.log("GetMeetingsByUser " + req.query.user_id + "...");
+    var meetings = await GetMeetingsByUserSQL(pool, req.query.user_id);
+    res.send(meetings);
+  } catch (err) {
+    console.log("Error", err);
+  }
+}
+
+async function AddUserToMeeting(req, res) {
+  console.log("req: ", req.body)
+  try {
+    var response = await AddUserToMeetingSQL(pool, req.body.user_id, req.body.meeting_id);
+    console.log(response)
+    if (response?.success) {
+      console.log("Succesfully joined!");
+      res.send({ success: true });
+    }
+    else {
+      res.send(response);
+    }
+  } catch (err) {
+    console.log("Error", err);
+  }
+}
+
 async function JoinMeeting(req, res) {
   try {
     var response = await AddUserToMeetingSQL(pool, req.body.user.id, req.body.meeting_id);
