@@ -167,7 +167,7 @@ export async function GetProfilePhotoByUserId(req, res) {
   try {
     console.log("user_id " + req.query.user_id + "...");
 
-    dbGetProfilePhotoByUserId(pool, req.query.user_id, res );
+    dbGetProfilePhotoByUserId(pool, req.query.user_id, res);
 
   } catch (err) {
     console.log("Error ", err);

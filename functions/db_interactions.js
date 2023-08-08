@@ -356,27 +356,34 @@ export async function dbIncomingMessagesListByUserId(Pool, reciever_id, respond)
 
 //#region dbProfilePhoto
 export async function dbAddProfilePhoto(Pool, body, respond) {
- 
+
     Pool.query(`INSERT INTO public."profilePhoto"(
         user_id, image)
         VALUES ('`+ body.user_id + "','" + body.image + "')",
         (err, res) => {
             if (err) {
-                console.log("Error!  "+ err);                
-                respond.send({ "success": false, "error": err.detail })
+                console.log(body.user_id)
+                console.log(err);
+                if (err.code == "23505") {
+                    console.log("Renewing profile photo...")
+                    dbUpdateProfilePhoto(Pool, body, respond)
+                }
+                else {
+                    respond.send({ "success": false, "error": err.detail })
+                }
                 return;
             }
-
+            console.log("successfully added");
             respond.send({ "success": true });
         })
 }
 
 export async function dbUpdateProfilePhoto(Pool, body, respond) {
- 
+
     Pool.query(`UPDATE public."profilePhoto" SET image='${body.image}' WHERE user_id=${body.user_id}`,
         (err, res) => {
             if (err) {
-                console.log("Error!  "+ err);                
+                console.log("Error!  " + err);
                 respond.send({ "success": false, "error": err.detail })
                 return;
             }
@@ -386,20 +393,20 @@ export async function dbUpdateProfilePhoto(Pool, body, respond) {
 }
 
 export async function dbGetProfilePhotoByUserId(Pool, user_id, respond) {
-    dbBaseGetByIdMethod(Pool,user_id,'profilePhoto','user_id',respond) 
+    dbBaseGetByIdMethod(Pool, user_id, 'profilePhoto', 'user_id', respond)
 }
 
 //#endregion
 
-function dbBaseGetByIdMethod(Pool,id, tableName, idName, respond){
-    Pool.query(`SELECT * FROM public."${tableName}" WHERE ${idName}=`+ id,
+function dbBaseGetByIdMethod(Pool, id, tableName, idName, respond) {
+    Pool.query(`SELECT image FROM public."${tableName}" WHERE ${idName}=` + id,
         (err, res) => {
             if (err) {
-                console.log("Error!  "+ err);                
+                console.log("Error!  " + err);
                 respond.send({ "success": false, "error": err.detail })
                 return;
             }
-
-            respond.send({ "success": true, "datas": res.rows });
+            console.log("Profile photo successfully obtained")
+            respond.send({ "success": true, "image": res.rows[0].image });
         })
 }
