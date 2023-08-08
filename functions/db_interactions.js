@@ -407,6 +407,6 @@ function dbBaseGetByIdMethod(Pool, id, tableName, idName, respond) {
                 return;
             }
             console.log("Profile photo successfully obtained")
-            respond.send({ "success": true, "image": res.rows[0].image });
+            respond.send({ "success": true, "image": res.rows[0]?.image });
         })
 }
