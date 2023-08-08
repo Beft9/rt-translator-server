@@ -75,7 +75,13 @@ router.post('/login', Login)
 router.post('/update_status', UpdateStatus);
 router.get('/get_meetings_by_user', GetMeetingsByUser);
 router.post('/add_user_to_meeting', AddUserToMeeting);
+router.post('/message/send', SendMessage);
+router.post('/profile_photo/add', ProfilePhotoAdd);
+router.post('/profile_photo/update', ProfilePhotoUpdate);
 //router.post('/transcript', Transcript);
+router.get('/message/sended_messages_list_by_user_id', SendedMessagesListByUserId);
+router.get('/message/sended_incoming_messages_list_by_user_id', IncomingMessagesListByUserId);
+router.get('/profile_photo/get_by_user_id', GetProfilePhotoByUserId);
 router.get('/get_contacts', GetContacts);
 router.get('/get_profile', GetProfile);
 router.get('/translate', Translater);
@@ -84,11 +90,11 @@ router.get('/texttospeech', TextToSpeechHTTP);
 //router.ws("/meeting_hub", MeetingWS);
 
 // User Interactions !!!
-import { AddUser, UserLogin } from "./functions/db_interactions.js";
+import { AddUser, UserLogin, dbSendMessage, dbSendedMessagesListByUserId, dbIncomingMessagesListByUserId, dbAddProfilePhoto, dbGetProfilePhotoByUserId, dbUpdateProfilePhoto } from "./functions/db_interactions.js";
 
 export async function SignUp(req, res) {
   try {
-    AddUser(pool, req.body.body, res);
+    AddUser(pool, req.body, res);
 
   } catch (err) {
     console.log("Error", err);
@@ -97,13 +103,77 @@ export async function SignUp(req, res) {
 
 export async function Login(req, res) {
   try {
-    UserLogin(pool, req.body.body, res);
+    UserLogin(pool, req.body, res);
 
   } catch (err) {
     console.log("Error", err);
   }
 }
 
+//#region Messages
+export async function SendMessage(req, res) {
+  try {
+    dbSendMessage(pool, req.body, res);
+
+  } catch (err) {
+    console.log("Error ", err);
+  }
+}
+
+export async function SendedMessagesListByUserId(req, res) {
+  try {
+    console.log("sender_user_id " + req.query.sender_user_id + "...");
+
+    dbSendedMessagesListByUserId(pool, req.query.sender_user_id, res);
+
+  } catch (err) {
+    console.log("Error ", err);
+  }
+}
+
+export async function IncomingMessagesListByUserId(req, res) {
+  try {
+    console.log("incoming_user_id " + req.query.incoming_user_id + "...");
+
+    dbIncomingMessagesListByUserId(pool, req.query.incoming_user_id, res);
+
+  } catch (err) {
+    console.log("Error ", err);
+  }
+}
+//#endregion
+
+//#region profilePhoto
+
+export async function ProfilePhotoAdd(req, res) {
+  try {
+    dbAddProfilePhoto(pool, req.body, res);
+
+  } catch (err) {
+    console.log("Error ", err);
+  }
+}
+
+export async function ProfilePhotoUpdate(req, res) {
+  try {
+    dbUpdateProfilePhoto(pool, req.body, res);
+
+  } catch (err) {
+    console.log("Error ", err);
+  }
+}
+
+export async function GetProfilePhotoByUserId(req, res) {
+  try {
+    console.log("user_id " + req.query.user_id + "...");
+
+    dbGetProfilePhotoByUserId(pool, req.query.user_id, res);
+
+  } catch (err) {
+    console.log("Error ", err);
+  }
+}
+//#endregion
 
 // Google Api Methods !!!
 
