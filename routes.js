@@ -61,30 +61,33 @@ async function Translater(req, res) {
   res.send({ translation, audio })
 }
 
+const auth = verifyToken;
+
 const router = Router();
 
 //import Transcripta from "./"
 
-router.post('/send_speech', GetSpeech);
-router.post('/create_meeting', CreateMeeting);
-router.post('/join_meeting', JoinMeeting);
-router.post('/leave_meeting', LeaveMeeting);
-router.post('/change_language', ChangeLanguage);
+router.post('/send_speech', auth, GetSpeech);
+router.post('/create_meeting', auth, CreateMeeting);
+router.post('/join_meeting', auth, JoinMeeting);
+router.post('/leave_meeting', auth, LeaveMeeting);
+router.post('/change_language', auth, ChangeLanguage);
 router.post('/sign_up', SignUp)
 router.post('/login', Login)
-router.post('/update_status', UpdateStatus);
-router.get('/get_meetings_by_user', GetMeetingsByUser);
-router.post('/add_user_to_meeting', AddUserToMeeting);
+router.post('/update_status', auth, UpdateStatus);
+router.get('/get_meetings_by_user', auth, GetMeetingsByUser);
+router.post('/add_user_to_meeting', auth, AddUserToMeeting);
 //router.post('/transcript', Transcript);
-router.get('/get_contacts', GetContacts);
-router.get('/get_profile', GetProfile);
-router.get('/translate', Translater);
-router.get('/texttospeech', TextToSpeechHTTP);
+router.get('/get_contacts', auth, GetContacts);
+router.get('/get_profile', auth, GetProfile);
+router.get('/translate', auth, Translater);
+router.get('/texttospeech', auth, TextToSpeechHTTP);
+
 
 //router.ws("/meeting_hub", MeetingWS);
 
 // User Interactions !!!
-import { AddUser, UserLogin } from "./functions/db_interactions.js";
+import { AddUser, UserLogin, verifyToken } from "./functions/db_interactions.js";
 
 export async function SignUp(req, res) {
   try {
@@ -97,7 +100,7 @@ export async function SignUp(req, res) {
 
 export async function Login(req, res) {
   try {
-    UserLogin(pool, req.body.body, res);
+    UserLogin(pool, req.body, res);
 
   } catch (err) {
     console.log("Error", err);
