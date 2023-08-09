@@ -2,6 +2,8 @@
 
 // import { MeetingStatuses } from "../routes";
 
+import jwt from "jsonwebtoken"
+
 export const MeetingStatuses = {
     PAST: 1,
     ACTIVE: 2,
@@ -43,7 +45,17 @@ export function UserLogin(Pool, user, respond) {
                     respond.send({ "success": false, "error": "No such a user!" });
                 }
                 else if (res.rows[0].password == user.password) {
-                    respond.send({ "success": true, "user": res.rows[0] });
+                    const userData = {
+                        id: res.rows[0].id,
+                        name: res.rows[0].name,
+                        email: res.rows[0].email,
+                        // ... diğer kullanıcı bilgileri
+                    };
+                    const token = GenerateToken(userData)
+                    console.log("token", token)
+                    respond.send({ "success": true, "user": res.rows[0], "token": token }); // JWT kullanıcıya döndürülüyor
+                
+                    // respond.send({ "success": true, "user": res.rows[0] });
                 }
                 else {
                     respond.send({ "success": false, "error": "Wrong password" });
@@ -54,6 +66,27 @@ export function UserLogin(Pool, user, respond) {
         })
 }
 
+
+export const verifyToken = (req, res, next) => {
+    const token =
+      req.body.token || req.query.token || req.headers["x-access-token"];
+  
+    if (!token) {
+      return res.status(403).send("A token is required for authentication");
+    }
+    try {
+      const decoded = jwt.verify(token, "secretKeyForApp123");
+      req.user = decoded;
+    } catch (err) {
+      return res.status(401).send("Invalid Token");
+    }
+    return next();
+  };
+
+export function GenerateToken(userData) {
+    const token = jwt.sign(userData, 'secretKeyForApp123', { expiresIn: '1h' }); 
+    return token;
+}
 export function GetContactsSQL(Pool, user_id) {
     return new Promise((resolve) => {
         Pool.query(`SELECT id, name, language, status FROM public."users";`,
