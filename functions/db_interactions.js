@@ -323,3 +323,123 @@ export async function DeleteUserFromMeetingSQL(Pool, user_id, meeting_id) {
             })
     })
 }
+
+
+//#region dbSendMessage
+export async function dbSendMessage(Pool, body, respond) {
+    var time = new Date(Date.now() + (1000 * 60 * (-(new Date()).getTimezoneOffset()))).toISOString().replace('T', ' ').replace('Z', '');
+    var now = new Date().toISOString().split('T')[0];
+    Pool.query(`INSERT INTO public."Messages"(
+        sender_id, reciever_id, message, send_date)
+        VALUES ('`+ body.sender_id + "','" + body.reciever_id + "','" + body.message + "','" + time + "')",
+        (err, res) => {
+            if (err) {
+                console.log("Error!");
+                console.log(err)
+                respond.send({ "success": false, "error": err.detail })
+                return;
+            }
+
+            respond.send({ "success": true });
+        })
+}
+
+export async function dbSendedMessagesListByUserId(Pool, sender_id, respond) {
+
+    Pool.query(`SELECT *
+	FROM public."Messages" where sender_id = '`+ sender_id + "';",
+        (err, res) => {
+            if (err) {
+                console.log("Error! >>> " + err);
+                respond.send({ "success": false, "error": err.detail })
+                return;
+            }
+
+            if (res.rows.length < 1) {
+                console.log("No records found!");
+                respond.send({ "success": false, "error": "No records found!" });
+                return;
+            }
+
+            respond.send({ "success": true, "datas": res.rows });
+        })
+}
+
+export async function dbIncomingMessagesListByUserId(Pool, reciever_id, respond) {
+
+    Pool.query(`SELECT *
+	FROM public."Messages" where reciever_id = '`+ reciever_id + "';",
+        (err, res) => {
+            if (err) {
+                console.log("Error! >>> " + err);
+                respond.send({ "success": false, "error": err.detail })
+                return;
+            }
+
+            if (res.rows.length < 1) {
+                console.log("No records found!");
+                respond.send({ "success": false, "error": "No records found!" });
+                return;
+            }
+
+            respond.send({ "success": true, "datas": res.rows });
+        })
+}
+//#endregion
+
+//#region dbProfilePhoto
+export async function dbAddProfilePhoto(Pool, body, respond) {
+
+    Pool.query(`INSERT INTO public."profilePhoto"(
+        user_id, image)
+        VALUES ('`+ body.user_id + "','" + body.image + "')",
+        (err, res) => {
+            if (err) {
+                console.log(body.user_id)
+                console.log(err);
+                if (err.code == "23505") {
+                    console.log("Renewing profile photo...")
+                    dbUpdateProfilePhoto(Pool, body, respond)
+                }
+                else {
+                    respond.send({ "success": false, "error": err.detail })
+                }
+                return;
+            }
+            console.log("successfully added");
+            respond.send({ "success": true });
+        })
+}
+
+export async function dbUpdateProfilePhoto(Pool, body, respond) {
+
+    Pool.query(`UPDATE public."profilePhoto" SET image='${body.image}' WHERE user_id=${body.user_id}`,
+        (err, res) => {
+            if (err) {
+                console.log("Error!  " + err);
+                respond.send({ "success": false, "error": err.detail })
+                return;
+            }
+
+            respond.send({ "success": true });
+        })
+}
+
+export async function dbGetProfilePhotoByUserId(Pool, user_id, respond) {
+    dbBaseGetByIdMethod(Pool, user_id, 'profilePhoto', 'user_id', respond)
+}
+
+//#endregion
+
+function dbBaseGetByIdMethod(Pool, id, tableName, idName, respond) {
+    Pool.query(`SELECT image FROM public."${tableName}" WHERE ${idName}=` + id,
+        (err, res) => {
+            if (err) {
+                console.log("Error!  " + err);
+                respond.send({ "success": false, "error": err.detail })
+                return;
+            }
+            console.log("Profile photo successfully obtained")
+            respond.send({ "success": true, "image": res.rows[0]?.image });
+        })
+}
