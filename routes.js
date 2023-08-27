@@ -69,14 +69,17 @@ const router = Router();
 
 router.post('/send_speech', auth, GetSpeech);
 router.post('/create_meeting', auth, CreateMeeting);
+router.post('/start_meeting', auth, StartMeeting);
 router.post('/join_meeting', auth, JoinMeeting);
 router.post('/leave_meeting', auth, LeaveMeeting);
+router.post('/finish_meeting', auth, FinishMeeting);
 router.post('/change_language', auth, ChangeLanguage);
 router.post('/sign_up', SignUp)
 router.post('/login', Login)
 router.post('/update_status', auth, UpdateStatus);
 router.get('/get_meetings_by_user', auth, GetMeetingsByUser);
 router.post('/add_user_to_meeting', auth, AddUserToMeeting);
+router.post('/add_users_to_meeting', auth, AddUsersToMeeting);
 router.post('/message/send', auth, SendMessage);
 router.post('/profile_photo/add', auth, ProfilePhotoAdd);
 router.post('/profile_photo/update', auth, ProfilePhotoUpdate);
@@ -88,12 +91,14 @@ router.get('/get_contacts', auth, GetContacts);
 router.get('/get_profile', auth, GetProfile);
 router.get('/translate', auth, Translater);
 router.get('/texttospeech', auth, TextToSpeechHTTP);
+router.get('/get_users', auth, GetUsers)
+
 
 
 //router.ws("/meeting_hub", MeetingWS);
 
 // User Interactions !!!
-import { AddUser, UserLogin, verifyToken, dbSendMessage, dbSendedMessagesListByUserId, dbIncomingMessagesListByUserId, dbAddProfilePhoto, dbGetProfilePhotoByUserId, dbUpdateProfilePhoto } from "./functions/db_interactions.js";
+import { AddUser, UserLogin, verifyToken, dbSendMessage, dbSendedMessagesListByUserId, dbIncomingMessagesListByUserId, dbAddProfilePhoto, dbGetProfilePhotoByUserId, dbUpdateProfilePhoto, StartMeetingSQL, dbGetUsers, AddUsersToMeetingSQL, GetMeetingByMeetingIdSQL, FinishMeetingForAllUser } from "./functions/db_interactions.js";
 
 export async function SignUp(req, res) {
   try {
@@ -176,6 +181,16 @@ export async function GetProfilePhotoByUserId(req, res) {
     console.log("Error ", err);
   }
 }
+
+export async function GetUsers(req, res) {
+  console.log("**********", res.query)
+
+  try {
+    dbGetUsers(pool, req.query.user_id, res);
+  } catch (err) {
+    console.log("Error ", err);
+  }
+}
 //#endregion
 
 // Google Api Methods !!!
@@ -193,6 +208,25 @@ async function CreateMeeting(req, res) {
 
   try {
     var response = await CreateMeetingSQL(pool, req.body.name, req.body.createdate, req.body.userid, req.body.topic);
+    if (response?.success) {
+      var meeting = await GetMyMeetingSQL(pool, response.id)
+      // if (req.body.meeting_status === MeetingStatuses.ACTIVE) {
+      AddUserToMeetingSQL(pool, req.body.userid, meeting.meeting.id);
+      // }
+      CreateHub(req.app.get('io'), req.body.userid, meeting.meeting.id);
+      res.send({ success: true, meeting: meeting.meeting });
+    } else {
+      res.send(response);
+    }
+  } catch (err) {
+    console.log("Error", err);
+  }
+}
+
+
+async function StartMeeting(req, res) {
+  try {
+    var response = await StartMeetingSQL(pool, req.body.userid);
     if (response?.success) {
       var meeting = await GetMyMeetingSQL(pool, response.id)
       // if (req.body.meeting_status === MeetingStatuses.ACTIVE) {
@@ -236,18 +270,45 @@ async function AddUserToMeeting(req, res) {
   }
 }
 
+async function AddUsersToMeeting(req, res) {
+  try {
+    var response = await AddUsersToMeetingSQL(pool, req.body.user_ids, req.body.meeting_id);
+    console.log(response)
+    // if (response?.success) {
+    //   console.log("Succesfully joined!");
+    //   res.send({ success: true });
+    // }
+    // else {
+    //   res.send(response);
+    // }
+    if (response?.success) {
+      var meeting = await GetMyMeetingSQL(pool, req.body.meeting_id)
+      res.send({ success: true, meeting: meeting.meeting });
+    } else {
+      res.send(response);
+    }
+  } catch (err) {
+    console.log("Error", err);
+  }
+}
+
 async function JoinMeeting(req, res) {
   try {
-    var response = await AddUserToMeetingSQL(pool, req.body.user.id, req.body.meeting_id);
+    var meeting_by_meeting_id = await GetMeetingByMeetingIdSQL(pool, req.body.meeting_id)
+    console.log(meeting_by_meeting_id)
+    const meeting_id = meeting_by_meeting_id?.meeting.id
+    var response = await AddUserToMeetingSQL(pool, req.body.user_id, meeting_id);
     console.log(response)
     if (response?.success) {
       console.log("Succesfully joined!");
-      var participants = await GetParticipantsSQL(pool, req.body.meeting_id);
+      var participants = await GetParticipantsSQL(pool, meeting_id);
+      console.log(participants)
+      var meeting = await GetMyMeetingSQL(pool, meeting_id)
       participants.forEach((user) => {
         console.log(user);
-        SendNewUser(req.app.get('io'), req.body.meeting_id, user.id, participants);
+        SendNewUser(req.app.get('io'), meeting_id, user.id, participants);
       })
-      res.send({ success: true, participants: participants });
+      res.send({ success: true, participants: participants, meeting: meeting.meeting });
     }
     else {
       res.send(response);
@@ -272,6 +333,24 @@ async function LeaveMeeting(req, res) {
     console.log("Error", err);
   }
 }
+
+async function FinishMeeting(req, res) {
+  try {
+    var response = await FinishMeetingForAllUser(pool, req.body.meeting_id);
+    if (response?.success) {
+      console.log("Succesfully left!");
+      var participants = await GetParticipantsSQL(pool, req.body.meeting_id);
+      participants.forEach((user) => {
+        console.log(user);
+        SendNewUser(req.app.get('io'), req.body.meeting_id, user.id, participants);
+      })
+    }
+    res.send(response)
+  } catch (err) {
+    console.log("Error", err);
+  }
+}
+
 
 async function ChangeLanguage(req, res) {
   try {
