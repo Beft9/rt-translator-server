@@ -7,7 +7,8 @@ const PORT = 5001
 const app = express();
 const httpServer = createServer(app);
 const io = new Server(httpServer, { path: "/meeting_hub" });
-const ipAddress = '192.168.1.185';
+// const ipAddress = '192.168.1.185';
+const ipAddress = '192.168.1.39'
 
 app.set("io", io);
 
