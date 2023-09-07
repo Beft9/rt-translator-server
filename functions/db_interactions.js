@@ -2,6 +2,7 @@
 
 // import { MeetingStatuses } from "../routes";
 
+import axios from "axios";
 import jwt from "jsonwebtoken"
 
 export const MeetingStatuses = {
@@ -9,6 +10,9 @@ export const MeetingStatuses = {
     ACTIVE: 2,
     FUTURE: 3
 }
+
+const expoApiUrl = 'https://exp.host/--/api/v2/push/send';
+
 
 export function AddUser(Pool, user, respond) {
     console.log(user);
@@ -101,6 +105,64 @@ export function GetContactsSQL(Pool, user_id) {
                 }
             })
     })
+}
+
+
+export function SaveExpoTokenSQL(Pool, user_id, expo_push_token, res) {
+    const updateQuery = `
+        UPDATE users
+        SET expo_push_token = $2
+        WHERE id = $1;
+        `;
+    console.log(user_id, expo_push_token)
+    Pool.query(updateQuery, [user_id, expo_push_token], (error, results) => {
+        if (error) {
+            return res.send({ "success": false, "error": 'Push Token cannot be saved.' })
+        }
+        if (results.rowCount > 0) {
+            return res.send({ "success": true, "error": 'Push token is saved succesfully.' })
+        } else {
+            return res.send({ "success": false, "error": 'User cannot be found.' })
+        }
+    });
+}
+
+export async function getPushToken(Pool, user_id) {
+    try {
+        const query = 'SELECT expo_push_token FROM users WHERE id = $1';
+        const result = await Pool.query(query, [user_id]);
+
+        if (result.rows.length === 0) {
+            return null;
+        }
+        return result.rows[0].expo_push_token;
+    } catch (error) {
+        throw error;
+    }
+}
+
+
+export async function SendExpoPushNotification(Pool, user_id, title, body) {
+    try {
+        const pushToken = await getPushToken(Pool, user_id)
+        if (pushToken != null) {
+            const notificationData = {
+                to: pushToken,
+                title: title,
+                body: body,
+            };
+
+            const response = await axios.post(expoApiUrl, notificationData, {
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+            });
+
+            console.log('Notification send:', response.data);
+        }
+    } catch (error) {
+        console.error('Notification cannot send:', error.message);
+    }
 }
 
 export function GetProfileSQL(Pool, user_id) {
@@ -414,6 +476,7 @@ export async function StartMeetingSQL(Pool, userid) {
                 } else {
                     console.log("Meeting Created on Table!");
                     const insertedId = res.rows[0].id;
+                    SendExpoPushNotification(Pool, userid, "Be Fast", "Meeting is started now. ")
                     resolve({ success: true, id: insertedId });
                 }
             }

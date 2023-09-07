@@ -92,13 +92,16 @@ router.get('/get_profile', auth, GetProfile);
 router.get('/translate', auth, Translater);
 router.get('/texttospeech', auth, TextToSpeechHTTP);
 router.get('/get_users', auth, GetUsers)
+router.get('/send_push_notification', auth, SendPushNotification)
+router.post('/save_expo_token', auth, SaveExpoToken)
+
 
 
 
 //router.ws("/meeting_hub", MeetingWS);
 
 // User Interactions !!!
-import { AddUser, UserLogin, verifyToken, dbSendMessage, dbSendedMessagesListByUserId, dbIncomingMessagesListByUserId, dbAddProfilePhoto, dbGetProfilePhotoByUserId, dbUpdateProfilePhoto, StartMeetingSQL, dbGetUsers, AddUsersToMeetingSQL, GetMeetingByMeetingIdSQL, FinishMeetingForAllUser } from "./functions/db_interactions.js";
+import { AddUser, UserLogin, verifyToken, dbSendMessage, dbSendedMessagesListByUserId, dbIncomingMessagesListByUserId, dbAddProfilePhoto, dbGetProfilePhotoByUserId, dbUpdateProfilePhoto, StartMeetingSQL, dbGetUsers, AddUsersToMeetingSQL, GetMeetingByMeetingIdSQL, FinishMeetingForAllUser, SaveExpoTokenSQL, SendExpoPushNotification } from "./functions/db_interactions.js";
 
 export async function SignUp(req, res) {
   try {
@@ -117,6 +120,28 @@ export async function Login(req, res) {
     console.log("Error", err);
   }
 }
+
+//# region push notificaion
+export async function SendPushNotification(req,res) {
+  const user_id = req.query.user_id
+  const title = req.query.title
+  const body = req.query.body
+  try {
+    SendExpoPushNotification(pool, user_id, title,body);
+  } catch (err) {
+    console.log("Error", err);
+  }
+}
+
+export async function SaveExpoToken(req, res) {
+  try {
+    SaveExpoTokenSQL(pool, req.body.user_id, req.body.expo_push_token, res);
+  } catch (err) {
+    console.log("Error", err);
+  }
+}
+
+//# end region
 
 //#region Messages
 export async function SendMessage(req, res) {
