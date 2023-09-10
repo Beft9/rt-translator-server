@@ -94,14 +94,14 @@ router.get('/texttospeech', auth, TextToSpeechHTTP);
 router.get('/get_users', auth, GetUsers)
 router.get('/send_push_notification', auth, SendPushNotification)
 router.post('/save_expo_token', auth, SaveExpoToken)
-
+router.post('/update_user_state', auth, UpdateUserState)
 
 
 
 //router.ws("/meeting_hub", MeetingWS);
 
 // User Interactions !!!
-import { AddUser, UserLogin, verifyToken, dbSendMessage, dbSendedMessagesListByUserId, dbIncomingMessagesListByUserId, dbAddProfilePhoto, dbGetProfilePhotoByUserId, dbUpdateProfilePhoto, StartMeetingSQL, dbGetUsers, AddUsersToMeetingSQL, GetMeetingByMeetingIdSQL, FinishMeetingForAllUser, SaveExpoTokenSQL, SendExpoPushNotification } from "./functions/db_interactions.js";
+import { AddUser, UserLogin, verifyToken, dbSendMessage, dbSendedMessagesListByUserId, dbIncomingMessagesListByUserId, dbAddProfilePhoto, dbGetProfilePhotoByUserId, dbUpdateProfilePhoto, StartMeetingSQL, dbGetUsers, AddUsersToMeetingSQL, GetMeetingByMeetingIdSQL, FinishMeetingForAllUser, SaveExpoTokenSQL, SendExpoPushNotification, UpdateUserStateSQL } from "./functions/db_interactions.js";
 
 export async function SignUp(req, res) {
   try {
@@ -116,6 +116,14 @@ export async function Login(req, res) {
   try {
     UserLogin(pool, req.body, res);
 
+  } catch (err) {
+    console.log("Error", err);
+  }
+}
+
+export async function UpdateUserState(req, res) {
+  try {
+    UpdateUserStateSQL(pool, req.body.user_id, req.body.user_state, res);
   } catch (err) {
     console.log("Error", err);
   }
@@ -307,6 +315,8 @@ async function AddUsersToMeeting(req, res) {
     //   res.send(response);
     // }
     if (response?.success) {
+      console.log("geldi")
+      req.body.user_ids.map(userid => SendExpoPushNotification(pool, userid,  "Be Fast", "Meeting is started now. "))
       var meeting = await GetMyMeetingSQL(pool, req.body.meeting_id)
       res.send({ success: true, meeting: meeting.meeting });
     } else {

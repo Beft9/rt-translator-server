@@ -71,6 +71,25 @@ export function UserLogin(Pool, user, respond) {
 }
 
 
+export function UpdateUserStateSQL(Pool, user_id, state, res) {
+    const updateQuery = `
+    UPDATE users
+    SET user_state = $2
+    WHERE id = $1;
+    `;
+    console.log(user_id, state)
+    Pool.query(updateQuery, [user_id, state], (error, results) => {
+        if (error) {
+            return res.send({ "success": false, "error": 'User state cannot be saved.' })
+        }
+        if (results.rowCount > 0) {
+            return res.send({ "success": true, "error": 'User state is saved succesfully.' })
+        } else {
+            return res.send({ "success": false, "error": 'User cannot be found.' })
+        }
+    });
+}
+
 export const verifyToken = (req, res, next) => {
     const token =
         req.body.token || req.query.token || req.headers["x-access-token"];
@@ -144,7 +163,10 @@ export async function getPushToken(Pool, user_id) {
 
 export async function SendExpoPushNotification(Pool, user_id, title, body) {
     try {
+
         const pushToken = await getPushToken(Pool, user_id)
+        console.log("geldi2", user_id, pushToken)
+
         if (pushToken != null) {
             const notificationData = {
                 to: pushToken,
@@ -634,7 +656,7 @@ export async function DeleteUserFromMeetingSQL(Pool, user_id, meeting_id) {
 export async function FinishMeetingForAllUser(Pool, meeting_id) {
     const currentDateTime = new Date();
     const localDateTime = new Date(currentDateTime.getTime() - (currentDateTime.getTimezoneOffset() * 60000));
-   
+
     return new Promise((resolve) => {
         Pool.query(
             `UPDATE public."meetings"
