@@ -6,10 +6,13 @@ import { Server } from "socket.io";
 const PORT = 5001
 const app = express();
 const httpServer = createServer(app);
-const io = new Server(httpServer, { path: "/meeting_hub" });
+const io = new Server(httpServer, { 
+  cors: { 
+    origin: '*',
+  } 
+});
 // const ipAddress = '192.168.1.185';
-const ipAddress = '192.168.1.39'
-
+const ipAddress = '192.168.1.52'
 app.set("io", io);
 
 console.log("Server started...")
@@ -21,13 +24,23 @@ app.use(express.urlencoded({ limit: '10mb' }));
 
 app.use(router)
 
-// httpServer.listen(PORT);
-
-app.listen(PORT, ipAddress, () => {
+httpServer.listen(PORT, ipAddress, () => {
   console.log(`Server is running on http://${ipAddress}:${PORT}`);
 });
 
+
 io.on("connection", (socket) => {
   console.log("Meeting socket created...");
-  console.log("id:", socket.id)
+  console.log("id:", socket.id);
+  socket.on('message', (msg) => {
+    console.log('message: ' + msg);
+    socket.broadcast.emit('message', msg)
+  });
+  io.on('disconnect', () => {
+    console.log('Disconnected');
+  });
 });
+
+
+
+
