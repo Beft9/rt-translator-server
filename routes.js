@@ -3,8 +3,6 @@ import { Router } from "express";
 import { v2 } from '@google-cloud/translate';
 import { v1 } from '@google-cloud/text-to-speech'
 
-import { WebSocket } from "ws";
-
 // Instantiates clients
 
 export const MeetingStatuses = {
